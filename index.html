@@ -17,6 +17,15 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./styles.css" />
+    <script>
+      // Apply the saved theme before first paint so the ledger never flashes the wrong palette.
+      try {
+        var theme = localStorage.getItem("priced-in-theme") === "light" ? "light" : "dark";
+        document.documentElement.dataset.theme = theme;
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute("content", theme === "light" ? "#f4efe6" : "#0c0b09");
+      } catch (error) { /* storage unavailable: keep the default dark palette */ }
+    </script>
   </head>
   <body>
     <div id="root"></div>
