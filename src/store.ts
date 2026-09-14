@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { BudgetLine, BudgetSnapshot, InvestmentScenario, LedgerItem } from './types'
+import type { Bill, BudgetLine, BudgetSnapshot, InvestmentScenario, LedgerItem } from './types'
 import { defaultStore, LEGACY_KEY, migrateLegacy, STORE_KEY, STORE_VERSION } from './lib/storage'
+import { monthlyAmount } from './lib/calculations'
 
 type AppState = ReturnType<typeof defaultStore> & {
   setUseExample: (value: boolean) => void
@@ -11,12 +12,17 @@ type AppState = ReturnType<typeof defaultStore> & {
   setInvestment: (investment: InvestmentScenario) => void
   upsertSavedItem: (item: LedgerItem) => void
   deleteSavedItem: (id: string) => void
+  upsertBill: (bill: Bill) => void
+  deleteBill: (id: string) => void
+  setBillArchived: (id: string, archived: boolean) => void
+  setPayment: (billId: string, month: string, amount: number | null) => void
+  seedBillsFromBudget: () => void
   importData: (raw: unknown) => boolean
 }
 
 const legacy = typeof window !== 'undefined' ? window.localStorage.getItem(LEGACY_KEY) : null
 
-export const useAppStore = create<AppState>()(persist((set) => ({
+export const useAppStore = create<AppState>()(persist((set, get) => ({
   ...defaultStore(),
   ...migrateLegacy(legacy),
   setUseExample: (useExample) => set({ useExample }),
@@ -26,11 +32,31 @@ export const useAppStore = create<AppState>()(persist((set) => ({
   setInvestment: (investment) => set({ investment }),
   upsertSavedItem: (item) => set((state) => ({ savedItems: [...state.savedItems.filter((entry) => entry.id !== item.id), item].sort((a, b) => b.createdAt.localeCompare(a.createdAt)) })),
   deleteSavedItem: (id) => set((state) => ({ savedItems: state.savedItems.filter((entry) => entry.id !== id) })),
+  upsertBill: (bill) => set((state) => ({ bills: [...state.bills.filter((b) => b.id !== bill.id), bill].sort((a, b) => a.name.localeCompare(b.name)) })),
+  deleteBill: (id) => set((state) => ({ bills: state.bills.filter((b) => b.id !== id), billPayments: state.billPayments.filter((p) => p.billId !== id) })),
+  setBillArchived: (id, archived) => set((state) => ({ bills: state.bills.map((b) => b.id === id ? { ...b, archived } : b) })),
+  setPayment: (billId, month, amount) => set((state) => {
+    const rest = state.billPayments.filter((p) => !(p.billId === billId && p.month === month))
+    if (amount === null || !Number.isFinite(amount)) return { billPayments: rest }
+    return { billPayments: [...rest, { billId, month, amount }] }
+  }),
+  seedBillsFromBudget: () => {
+    const { personalLines, bills } = get()
+    if (bills.length || !personalLines.length) return
+    const seeded: Bill[] = personalLines.map((line) => ({
+      id: crypto.randomUUID(),
+      name: line.name,
+      category: line.category,
+      expectedAmount: monthlyAmount(line.amount, line.recurrence),
+      createdAt: new Date().toISOString(),
+    }))
+    set({ bills: seeded })
+  },
   importData: (raw) => {
     if (!raw || typeof raw !== 'object') return false
     const incoming = raw as Partial<AppState>
     if (incoming.version !== STORE_VERSION || !Array.isArray(incoming.personalLines) || !Array.isArray(incoming.savedItems)) return false
-    set({ ...defaultStore(), ...incoming, version: STORE_VERSION })
+    set({ ...defaultStore(), ...incoming, bills: incoming.bills ?? [], billPayments: incoming.billPayments ?? [], version: STORE_VERSION })
     return true
   },
 }), { name: STORE_KEY, version: STORE_VERSION }))
