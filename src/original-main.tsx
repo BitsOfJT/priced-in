@@ -280,11 +280,18 @@ function OriginalDesign() {
     </div>
 
     <dialog id="source-history" className="source-dialog" aria-labelledby="source-history-title">
-      <h2 id="source-history-title">Price history</h2>
-      <p className="price-help">Monthly average retail prices in U.S. dollars. National averages, not exact store quotes. Unit and geography remain constant.</p>
-      <a id="source-history-link" target="_blank" rel="noreferrer">View BLS source ↗</a>
-      <pre id="source-history-content"></pre>
-      <button type="button" className="button button-secondary" id="close-source-history">Close history</button>
+      <div className="source-dialog-header">
+        <div>
+          <p className="eyebrow">Price history · <span id="source-history-unit"></span></p>
+          <h2 id="source-history-title">Price history</h2>
+        </div>
+        <button type="button" className="icon-button" id="close-source-history" aria-label="Close price history">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12"></path><path d="M18 6 6 18"></path></svg>
+        </button>
+      </div>
+      <p className="price-help">Monthly U.S. city-average retail prices from BLS. National averages, not exact store quotes. Unit and geography stay constant.</p>
+      <div id="source-history-content" className="source-history-scroll"></div>
+      <a id="source-history-link" className="source-link" target="_blank" rel="noreferrer">View BLS source ↗</a>
     </dialog>
     <div className="toast" id="toast" role="status" aria-live="polite"></div>
   </>

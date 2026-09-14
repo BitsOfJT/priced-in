@@ -294,7 +294,7 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
       if (!Array.isArray(result.data)) throw new Error("No usable catalog response");
       state.catalog=result.data.map(entry=>{
         const latest=selectPrices(entry.observations,0).latest;
-        return {id:entry.id,name:entry.name,category:entry.category,unitUsd:latest?.usd || 0,quantity:1,recurrence:"once",notes:entry.unit+" · U.S. city average",priceObservations:entry.observations,updatedAt:0,createdAt:0};
+        return {id:entry.id,name:entry.name,category:entry.category,unitUsd:latest?.usd || 0,quantity:1,recurrence:"once",notes:entry.unit,priceObservations:entry.observations,updatedAt:0,createdAt:0};
       });
       state.catalogStatus="BLS average retail prices · "+result.status+" · retrieved "+result.retrievedAt.slice(0,10);
     } catch { state.catalogStatus="Sourced prices are unavailable. Retry, or record prices in My items."; }
@@ -307,17 +307,19 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
     const thenUsd=matched.reduce((sum,item)=>sum+periods(item).previous.usd*item.quantity,0);
     const nowUsd=matched.reduce((sum,item)=>sum+periods(item).latest.usd*item.quantity,0);
     const btcThen=comparisons.reduce((sum,c)=>sum+c.btcThen,0),btcNow=comparisons.reduce((sum,c)=>sum+c.btcNow,0);
-    const dates=[...new Set(matched.map(item=>{const p=periods(item);return p.previous.period+" → "+p.latest.period;}))];
+    const dates=[...new Set(matched.map(item=>{const p=periods(item);return p.previous.period===p.latest.period?p.latest.period:p.previous.period+" → "+p.latest.period;}))];
     const usdChange=thenUsd?observedChange(thenUsd,nowUsd):null;
     const btcChange=btcThen && comparisons.length===matched.length?observedChange(btcThen,btcNow):null;
     const latestMode=state.lookback==="live";
+    const latestPeriod=matched.length?matched.map(item=>periods(item).latest.period).sort().at(-1):null;
+    const trendClass=change=>change===null||latestMode?"":change>0?"is-down":"is-up";
     els.hero.innerHTML=`
-      <div class="metric-card"><span class="metric-label">${latestMode?"Latest observed basket":"In dollars · matched items"}</span>
-      <strong class="metric-value ${usdChange>0?"is-down":"is-up"}">${latestMode ? priceLabel(nowUsd) : usdChange===null?"—":formatPercent(usdChange)}</strong>
-      <span class="metric-detail">${matched.length ? "Then "+priceLabel(thenUsd)+" · Latest "+priceLabel(nowUsd) : "Add dated observations or use sourced examples"}</span></div>
-      <div class="metric-card accent"><span class="metric-label">In bitcoin · date-matched prices</span>
-      <strong class="metric-value ${btcChange>0?"is-down":"is-up"}">${latestMode ? btcNow ? formatBtcValue(btcNow):"—" : btcChange===null?"—":formatPercent(btcChange)}</strong>
-      <span class="metric-detail">${btcChange===null?"Complete BTC observations required":"Then "+formatBtcValue(btcThen)+" · Latest "+formatBtcValue(btcNow)}</span></div>`;
+      <div class="metric-card"><span class="metric-label">${latestMode?"Latest observed basket · dollars":"In dollars · matched items"}</span>
+      <strong class="metric-value ${trendClass(usdChange)}">${latestMode ? matched.length ? priceLabel(nowUsd) : "—" : usdChange===null?"—":formatPercent(usdChange)}</strong>
+      <span class="metric-detail">${!matched.length ? "Add dated observations or use sourced examples" : latestMode ? matched.length+" items · observed "+latestPeriod : "Then "+priceLabel(thenUsd)+" · Latest "+priceLabel(nowUsd)}</span></div>
+      <div class="metric-card accent"><span class="metric-label">${latestMode?"Latest observed basket · bitcoin":"In bitcoin · date-matched prices"}</span>
+      <strong class="metric-value ${trendClass(btcChange)}">${latestMode ? btcNow ? formatBtcValue(btcNow):"—" : btcChange===null?"—":formatPercent(btcChange)}</strong>
+      <span class="metric-detail">${latestMode ? btcNow ? "Same basket at that month’s BTC/USD rate" : "Complete BTC observations required" : btcChange===null?"Complete BTC observations required":"Then "+formatBtcValue(btcThen)+" · Latest "+formatBtcValue(btcNow)}</span></div>`;
     els.comparisonNote.textContent=(dates.length===1?dates[0]+" · ":"")+matched.length+"/"+items.length+" items with matching price dates. Stocks excluded from basket totals.";
     els.readingCopy.textContent="Prices are observed dollar amounts. BLS entries are monthly U.S. city averages, not today's store quotes. Monthly prices use the mean daily BTC/USD close for that month; dated personal prices use that day's UTC close. Missing history is never inferred from inflation.";
     const status=document.getElementById("price-source-status");
@@ -328,6 +330,7 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
   function renderFilters() {
     els.filters.innerHTML = CATEGORIES.map((category) => {
       const count = category === "all" ? activeItems().length : activeItems().filter((item) => item.category === category).length;
+      if (!count && category !== "all" && state.category !== category) return "";
       return `<button class="category-chip" type="button" data-category="${category}" aria-pressed="${state.category === category}">${CATEGORY_LABELS[category]} <span>${count}</span></button>`;
     }).join("");
   }
@@ -341,13 +344,40 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
     const p=periods(item), comparison=comparisonFor(item);
     const latest=p.latest,previous=p.previous;
     const bitcoin=observation=>observation && state.rates[observation.period] ? formatBitcoinFromUsd(observation.usd*item.quantity,state.rates[observation.period].usd) : "BTC unavailable";
-    return `<div class="then-now observed-prices">
-      <span><em>Then · ${escapeHtml(p.target || "date needed")}</em><strong>${previous?priceLabel(previous.usd*item.quantity):"Unavailable"}</strong><small>${previous?escapeHtml(bitcoin(previous)):"No matching observation"}</small></span>
-      <span><em>Latest · ${escapeHtml(latest?.period || "undated input")}</em><strong>${latest?priceLabel(latest.usd*item.quantity):priceLabel(itemTotal(item))}</strong><small>${latest?escapeHtml(bitcoin(latest)):"Saved input; not a verified quote"}</small></span>
+    const badges=[
+      previous && latest ? '<span class="comparison-badge">USD '+formatPercent(observedChange(previous.usd,latest.usd))+'</span>' : "",
+      comparison ? '<span class="comparison-badge '+(comparison.btcPct<=0?'is-up':'is-down')+'">BTC '+formatPercent(comparison.btcPct)+'</span>' : "",
+    ].filter(Boolean);
+    const source=latest?.source || (String(item.id).startsWith("ex-")?"Example input":"Your input");
+    if (state.lookback==="live") {
+      return `<div class="then-now observed-prices single">
+      <span><em>Latest · ${escapeHtml(latest?.period || "undated")}</em><strong>${latest?priceLabel(latest.usd*item.quantity):priceLabel(itemTotal(item))}</strong><small>${latest?escapeHtml(bitcoin(latest)):"Unverified saved amount"}</small></span>
       </div>
-      ${previous && latest ? '<span class="comparison-badge">USD '+formatPercent(observedChange(previous.usd,latest.usd))+'</span>' : ""}
-      ${comparison?'<span class="comparison-badge '+(comparison.btcPct<=0?'is-up':'is-down')+'">BTC '+formatPercent(comparison.btcPct)+'</span>':""}
-      <small class="observation-source">${escapeHtml(latest?.source || (String(item.id).startsWith("ex-")?"Original example input":"User-entered input"))}</small>`;
+      <span class="compare-footer"><small class="observation-source">${escapeHtml(source)}</small></span>`;
+    }
+    return `<div class="then-now observed-prices">
+      <span><em>Then · ${escapeHtml(p.target || "date needed")}</em><strong class="${previous?"":"is-missing"}">${previous?priceLabel(previous.usd*item.quantity):"—"}</strong><small>${previous?escapeHtml(bitcoin(previous)):"Add a dated price to compare"}</small></span>
+      <span><em>Latest · ${escapeHtml(latest?.period || "undated")}</em><strong>${latest?priceLabel(latest.usd*item.quantity):priceLabel(itemTotal(item))}</strong><small>${latest?escapeHtml(bitcoin(latest)):"Unverified saved amount"}</small></span>
+      </div>
+      <span class="compare-footer">${badges.length?'<span class="badge-row">'+badges.join("")+'</span>':""}<small class="observation-source">${escapeHtml(source)}</small></span>`;
+  }
+
+  function monthName(period) {
+    const [year, month] = period.split("-").map(Number);
+    if (!year || !month) return period;
+    return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
+  }
+
+  function historyTableMarkup(observations) {
+    const sorted = [...observations].sort((a, b) => b.period.localeCompare(a.period));
+    if (!sorted.length) return '<p class="price-help">No observations recorded.</p>';
+    const rows = sorted.map((point, index) => {
+      const older = sorted[index + 1];
+      const change = older ? observedChange(older.usd, point.usd) : null;
+      const changeClass = change === null || Math.abs(change) < 0.0005 ? "" : change > 0 ? "is-down" : "is-up";
+      return `<tr><th scope="row">${escapeHtml(monthName(point.period))}</th><td>${priceLabel(point.usd)}</td><td class="${changeClass}">${change === null ? "" : formatPercent(change)}</td></tr>`;
+    }).join("");
+    return `<table class="history-table"><thead><tr><th scope="col">Month</th><th scope="col">Price</th><th scope="col">vs prior</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
   function visibleItems() {
@@ -395,12 +425,13 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
 
   function renderSummary() {
     const current = totals();
-    $("#listed-usd").textContent = formatUsd(current.listed);
-    $("#listed-btc").textContent = formatBitcoinFromUsd(current.listed);
-    $("#monthly-usd").textContent = formatUsd(current.monthly);
-    $("#monthly-btc").textContent = formatBitcoinFromUsd(current.monthly);
-    $("#holdings-usd").textContent = formatUsd(current.holdings);
-    $("#holdings-btc").textContent = formatBitcoinFromUsd(current.holdings);
+    const show = (usdId, btcId, value) => {
+      $("#" + usdId).textContent = value > 0 ? formatUsd(value) : "—";
+      $("#" + btcId).textContent = value > 0 ? formatBitcoinFromUsd(value) : "";
+    };
+    show("listed-usd", "listed-btc", current.listed);
+    show("monthly-usd", "monthly-btc", current.monthly);
+    show("holdings-usd", "holdings-btc", current.holdings);
   }
 
   function renderConverter() {
@@ -669,8 +700,9 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
         const item = activeItems().find((candidate) => candidate.id === itemButton.dataset.itemId);
         if (item && state.catalogMode) {
           const dialog=$("#source-history");
-          $("#source-history-title").textContent=item.name+" · "+item.notes;
-          $("#source-history-content").textContent=(item.priceObservations || []).sort((a,b)=>b.period.localeCompare(a.period)).map(p=>p.period+"   "+priceLabel(p.usd)).join("\n");
+          $("#source-history-title").textContent=item.name;
+          $("#source-history-unit").textContent=item.notes;
+          $("#source-history-content").innerHTML=historyTableMarkup(item.priceObservations || []);
           $("#source-history-link").href="https://data.bls.gov/timeseries/"+item.id;
           dialog.showModal();
         } else if(item) openSheet(item);
