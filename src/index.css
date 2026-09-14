@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #180f0a;
+  --color-warm-black: #211611;
+  --color-ivory: #fff8ed;
+  --color-paper: #f3e7d8;
+  --color-copper: #d68448;
+  --color-copper-deep: #a95322;
+  --color-moss: #61705b;
+  --font-display: "Fraunces", Georgia, serif;
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+html { overflow-x: clip; background: var(--color-paper); color: var(--color-ink); }
+body { min-width: 0; margin: 0; overflow-x: clip; font-family: var(--font-sans); }
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid var(--color-copper); outline-offset: 3px; }
+::selection { background: var(--color-copper); color: var(--color-ink); }
+.mono { font-family: var(--font-mono); }
+.display { font-family: var(--font-display); }
+.card { border: 1px solid rgba(24, 15, 10, .13); border-radius: 1.2rem; background: rgba(255, 248, 237, .78); box-shadow: 0 16px 38px rgba(47, 25, 13, .08); }
+.eyebrow { font-family: var(--font-mono); font-size: .68rem; font-weight: 500; letter-spacing: .13em; text-transform: uppercase; }
+[data-radix-popper-content-wrapper] { z-index: 60 !important; }
+
+/* Theme tokens stay semantic so the full dashboard changes together. */
+.dark {
+  --color-ink: #fff4e7;
+  --color-warm-black: #110a07;
+  --color-ivory: #251712;
+  --color-paper: #160d09;
+  --color-copper: #ef9b59;
+  --color-copper-deep: #f6bd86;
+  --color-moss: #a8c49e;
+  color-scheme: dark;
+}
+
+.dark .bg-ink { background-color: #100906; }
+.dark .bg-ink.text-ivory { color: #fff4e7; }
+.dark .bg-ink .text-ivory\/60, .dark .bg-ink .text-ivory\/45 { color: rgba(255, 244, 231, .62); }
+.dark .bg-ivory\/85 { background-color: rgba(37, 23, 18, .9); }
+.dark .card { background: rgba(37, 23, 18, .82); box-shadow: 0 16px 38px rgba(0, 0, 0, .28); }
+.dark input, .dark select { color-scheme: dark; }
