@@ -1,8 +1,9 @@
 import { Router } from 'express'
 import { readFileSync, writeFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 export const prices = Router()
-const cachePath = new URL('./prices-cache.json', import.meta.url)
+const cachePath = process.env.VERCEL ? '/tmp/priced-in-prices-cache.json' : fileURLToPath(new URL('./prices-cache.json', import.meta.url))
 type Entry = { at: string; data: unknown }
 let cache: Record<string, Entry> = {}
 try { cache = JSON.parse(readFileSync(cachePath, 'utf8')) } catch { /* first run */ }
@@ -16,7 +17,7 @@ async function cached(key: string, fetcher: () => Promise<unknown>) {
     const data = await task
     const entry = { data, at: new Date().toISOString() }
     cache[key] = entry
-    writeFileSync(cachePath, JSON.stringify(cache))
+    try { writeFileSync(cachePath, JSON.stringify(cache)) } catch { /* ephemeral serverless cache */ }
     return { ...entry, status: 'fresh' }
   } catch (error) {
     if (previous) return { ...previous, status: 'stale' }
