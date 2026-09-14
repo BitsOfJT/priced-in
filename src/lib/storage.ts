@@ -1,4 +1,4 @@
-import type { BudgetLine, BudgetSnapshot, InvestmentScenario, LedgerItem } from '../types'
+import type { Bill, BillPayment, BudgetLine, BudgetSnapshot, InvestmentScenario, LedgerItem } from '../types'
 
 export const STORE_VERSION = 2
 export const LEGACY_KEY = 'priced-in-ledger'
@@ -13,6 +13,8 @@ export type PricedInStore = {
   useExample: boolean
   personalLines: BudgetLine[]
   snapshots: BudgetSnapshot[]
+  bills: Bill[]
+  billPayments: BillPayment[]
   savedItems: LedgerItem[]
   investment: InvestmentScenario
   importedLegacy: boolean
@@ -24,7 +26,7 @@ const defaultInvestment = (): InvestmentScenario => ({
   startMonth: '', endMonth: '',
 })
 
-export const defaultStore = (): PricedInStore => ({ version: STORE_VERSION, useExample: true, personalLines: [], snapshots: [], savedItems: [], investment: defaultInvestment(), importedLegacy: false })
+export const defaultStore = (): PricedInStore => ({ version: STORE_VERSION, useExample: true, personalLines: [], snapshots: [], bills: [], billPayments: [], savedItems: [], investment: defaultInvestment(), importedLegacy: false })
 
 function isLedger(value: unknown): value is LedgerItem[] {
   return Array.isArray(value) && value.every((item) => item && typeof item === 'object' && 'name' in item && 'amount' in item)
