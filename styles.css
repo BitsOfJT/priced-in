@@ -348,6 +348,102 @@ h2 {
   min-height: 44px;
 }
 
+.lookback-dial {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 300px);
+  padding: 12px 14px 10px;
+  background: rgba(244, 239, 230, 0.045);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.lookback-readout {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lookback-label {
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+#lookback-value {
+  color: var(--ivory);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+#lookback-dial {
+  --dial-progress: 50%;
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+#lookback-dial::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--copper) 0, var(--copper) var(--dial-progress), rgba(244, 239, 230, 0.16) var(--dial-progress), rgba(244, 239, 230, 0.16) 100%);
+}
+
+#lookback-dial::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(244, 239, 230, 0.16);
+}
+
+#lookback-dial::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--copper);
+}
+
+#lookback-dial::-webkit-slider-thumb {
+  width: 22px;
+  height: 22px;
+  margin-top: -8px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--ivory);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, .35);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+#lookback-dial::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--ivory);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, .35);
+}
+
+#lookback-dial:focus-visible {
+  outline: 2px solid var(--copper-bright);
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+
+.lookback-scale {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
 .hero-content {
   position: relative;
   z-index: 2;
@@ -1218,15 +1314,8 @@ textarea::placeholder {
   }
 
   .timeframe {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
     width: 100%;
     margin-top: 24px;
-  }
-
-  .timeframe button {
-    min-width: 0;
-    padding-inline: 6px;
   }
 
   .hero-content,
