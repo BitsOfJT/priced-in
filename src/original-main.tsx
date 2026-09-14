@@ -24,9 +24,15 @@ function OriginalDesign() {
           <span id="header-btc-change" className="market-change">Live rate</span>
         </div>
 
-        <div className="segmented compact" aria-label="Bitcoin display unit">
-          <button type="button" data-denomination="sats" aria-pressed="true">sats</button>
-          <button type="button" data-denomination="btc" aria-pressed="false">BTC</button>
+        <div className="topbar-actions">
+          <div className="segmented compact" aria-label="Bitcoin display unit">
+            <button type="button" data-denomination="sats" aria-pressed="true">sats</button>
+            <button type="button" data-denomination="btc" aria-pressed="false">BTC</button>
+          </div>
+          <button type="button" className="theme-toggle" id="theme-toggle" aria-label="Switch to light mode" aria-pressed="true">
+            <svg className="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" /></svg>
+            <svg className="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
+          </button>
         </div>
       </header>
 
@@ -37,11 +43,18 @@ function OriginalDesign() {
               <p className="eyebrow">The same life, another unit</p>
               <h1 id="comparison-title">What does your life cost in bitcoin?</h1>
             </div>
-            <div className="segmented timeframe" aria-label="Comparison window">
-              <button type="button" data-lookback="live">Latest</button>
-              <button type="button" data-lookback="1y">1Y</button>
-              <button type="button" data-lookback="3y">3Y</button>
-              <button type="button" data-lookback="5y" aria-pressed="true">5Y</button>
+            <div className="timeframe lookback-dial">
+              <div className="lookback-readout">
+                <span className="lookback-label">Compare with</span>
+                <output id="lookback-value" htmlFor="lookback-dial">5 years ago</output>
+              </div>
+              <input id="lookback-dial" type="range" min="0" max="10" step="1" defaultValue="5" aria-label="Comparison window in years, zero is live" aria-valuetext="5 years ago" list="lookback-ticks" />
+              <datalist id="lookback-ticks">
+                <option value="0" label="Live"></option>
+                <option value="5" label="5y"></option>
+                <option value="10" label="10y"></option>
+              </datalist>
+              <div className="lookback-scale" aria-hidden="true"><span>Live</span><span>5y</span><span>10y</span></div>
             </div>
           </div>
 

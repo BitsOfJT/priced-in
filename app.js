@@ -144,7 +144,7 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
         state.items = cleaned;
       }
       if (["sats", "btc"].includes(saved.denomination)) state.denomination = saved.denomination;
-      if (["live", "1y", "3y", "5y"].includes(saved.lookback)) state.lookback = saved.lookback;
+      if (isLookback(saved.lookback)) state.lookback = saved.lookback;
       if (saved.quote && finiteNumber(saved.quote.usd) > 0) {
         state.quote = {
           ...fallbackQuote,
@@ -247,8 +247,32 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
   }
 
 
+  // Theme preference is shared with the rebuild app so both pages agree.
+  const THEME_KEY = "priced-in-theme";
+  function currentTheme() { return document.documentElement.dataset.theme === "light" ? "light" : "dark"; }
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem(THEME_KEY, theme); } catch { /* storage unavailable */ }
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", theme === "light" ? "#f4efe6" : "#0c0b09");
+    renderThemeToggle();
+  }
+  function renderThemeToggle() {
+    const toggle = $("#theme-toggle");
+    if (!toggle) return;
+    const dark = currentTheme() === "dark";
+    toggle.setAttribute("aria-pressed", String(dark));
+    toggle.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+    toggle.title = dark ? "Switch to light mode" : "Switch to dark mode";
+  }
+
+  const MAX_LOOKBACK_YEARS = 10;
+  function isLookback(value) { return value === "live" || /^([1-9]|10)y$/.test(String(value)); }
+  function lookbackYears(value = state.lookback) { return value === "live" ? 0 : Number.parseInt(value, 10); }
+  function lookbackFromYears(years) { const clamped = Math.min(MAX_LOOKBACK_YEARS, Math.max(0, Math.round(years))); return clamped === 0 ? "live" : `${clamped}y`; }
+  function lookbackText(value = state.lookback) { const years = lookbackYears(value); return years === 0 ? "Live prices" : years === 1 ? "1 year ago" : `${years} years ago`; }
   function activeItems() { return state.catalogMode ? state.catalog : state.items; }
-  function periods(item) { return selectPrices(item.priceObservations || [], state.lookback === "live" ? 0 : Number.parseInt(state.lookback)); }
+  function periods(item) { return selectPrices(item.priceObservations || [], lookbackYears()); }
   function comparisonFor(item) {
     const {latest, previous} = periods(item);
     if (!latest || !previous) return null;
@@ -434,7 +458,16 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
 
   function renderControls() {
     $$('[data-denomination]').forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.denomination === state.denomination)));
-    $$('[data-lookback]').forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.lookback === state.lookback)));
+    const dial = $("#lookback-dial");
+    if (dial) {
+      const years = String(lookbackYears());
+      if (dial.value !== years) dial.value = years;
+      dial.setAttribute("aria-valuetext", lookbackText());
+      dial.style.setProperty("--dial-progress", `${lookbackYears() / MAX_LOOKBACK_YEARS * 100}%`);
+    }
+    const readout = $("#lookback-value");
+    if (readout) readout.textContent = lookbackText();
+    renderThemeToggle();
   }
 
   function renderAll() {
@@ -628,7 +661,21 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
   }
 
   function bindEvents() {
+    const dial = $("#lookback-dial");
+    if (dial) {
+      // Re-render on every step so the basket totals track the dial; only fetch BTC history once the user settles.
+      dial.addEventListener("input", () => {
+        const next = lookbackFromYears(Number(dial.value));
+        if (next === state.lookback) return;
+        state.lookback = next;
+        persist();
+        renderAll();
+      });
+      dial.addEventListener("change", () => { void loadObservedRates(); });
+    }
+
     document.addEventListener("click", (event) => {
+      if (event.target.closest("#theme-toggle")) { applyTheme(currentTheme() === "dark" ? "light" : "dark"); return; }
       const mode = event.target.closest("[data-price-mode]");
       if(mode) {state.catalogMode=mode.dataset.priceMode==="catalog"; state.category="all"; state.search=""; els.search.value=""; renderAll(); void loadObservedRates(); return;}
       if(event.target.closest("#retry-prices")) { void loadCatalog(); return; }
@@ -637,15 +684,6 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
         state.denomination = denomination.dataset.denomination;
         persist();
         renderAll();
-        return;
-      }
-
-      const lookback = event.target.closest("[data-lookback]");
-      if (lookback) {
-        state.lookback = lookback.dataset.lookback;
-        persist();
-        renderAll();
-        void loadObservedRates();
         return;
       }
 

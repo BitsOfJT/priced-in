@@ -1,0 +1,15 @@
+{
+  "name": "Priced In",
+  "install": "npm install",
+  "terminals": [
+    {
+      "name": "api",
+      "command": "npm run dev:api"
+    },
+    {
+      "name": "web",
+      "command": "npm run dev"
+    }
+  ],
+  "ports": [4173, 8787]
+}
