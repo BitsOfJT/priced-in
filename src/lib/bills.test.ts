@@ -50,6 +50,16 @@ describe('bills calculations', () => {
     expect(merged[0].values.housing).toBe(1)
   })
 
+  it('excludes archived bills from month completeness', () => {
+    const withArchive: Bill[] = [...bills, { id: 'old', name: 'Old gym', category: 'other', archived: true, createdAt: '' }]
+    const payments: BillPayment[] = [
+      { billId: 'rent', month: '2024-01', amount: 1000 },
+      { billId: 'power', month: '2024-01', amount: 100 },
+    ]
+    expect(monthComplete(withArchive, payments, '2024-01')).toBe(true)
+    expect(monthComplete(bills, payments, '2024-01')).toBe(true)
+  })
+
   it('counts logged bills and total change only when both months complete', () => {
     const payments: BillPayment[] = [
       { billId: 'rent', month: '2024-01', amount: 1000 },
