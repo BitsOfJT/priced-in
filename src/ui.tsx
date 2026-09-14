@@ -4,6 +4,16 @@ export const money = (value: number | null | undefined) => value === null || val
 export const percent = (value: number | null | undefined) => value === null || value === undefined ? '—' : `${value > 0 ? '+' : ''}${value.toFixed(1)}%`
 export const btc = (value: number | null | undefined) => value === null || value === undefined ? '—' : `${value.toFixed(value < .01 ? 5 : 3)} BTC`
 
+// Chart strokes follow the theme tokens so lines stay visible in dark mode.
+export const chartTheme = {
+  ink: 'var(--color-ink)',
+  copper: 'var(--color-copper)',
+  grid: 'var(--color-ink)',
+  tick: { fontSize: 11, fill: 'var(--color-ink)', fillOpacity: 0.6 },
+  axis: { stroke: 'var(--color-ink)', strokeOpacity: 0.2 },
+  tooltip: { background: 'var(--color-ivory)', border: '1px solid color-mix(in srgb, var(--color-ink) 15%, transparent)', borderRadius: 10, fontSize: 12, boxShadow: '0 10px 30px rgba(0,0,0,.15)' },
+}
+
 export function Notice({ children, tone = 'neutral' }: { children: React.ReactNode; tone?: 'neutral' | 'warning' }) {
   return <div className={`flex gap-3 rounded-xl border px-4 py-3 text-sm ${tone === 'warning' ? 'border-copper/50 bg-copper/10' : 'border-ink/15 bg-paper/70'}`}><Info className="mt-0.5 size-4 shrink-0" />{children}</div>
 }
@@ -15,5 +25,5 @@ export function Button({ children, onClick, variant = 'dark', type = 'button', d
 }
 
 export function Metric({ title, value, detail, copper = false }: { title: string; value: string; detail: string; copper?: boolean }) {
-  return <article className={`card p-5 ${copper ? 'bg-ink text-ivory' : ''}`}><p className={`eyebrow ${copper ? 'text-copper' : 'text-ink/55'}`}>{title}</p><strong className="display mt-2 block text-3xl">{value}</strong><p className={`mt-1 text-sm ${copper ? 'text-ivory/65' : 'text-ink/60'}`}>{detail}</p></article>
+  return <article className={`card p-5 ${copper ? 'card-accent' : ''}`}><p className={`eyebrow ${copper ? '' : 'text-ink/55'}`}>{title}</p><strong className="display mt-2 block text-3xl">{value}</strong><p className={`card-detail mt-1 text-sm ${copper ? '' : 'text-ink/60'}`}>{detail}</p></article>
 }

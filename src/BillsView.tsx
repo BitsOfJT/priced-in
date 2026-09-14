@@ -9,7 +9,7 @@ import { monthLabel } from './lib/calculations'
 import { getBtcHistory, getSpot } from './lib/api'
 import { activeBills, billChange, billsTimeline, loggedCount, monthWindow, monthTotal, paymentFor, totalChange } from './lib/bills'
 import { useAppStore } from './store'
-import { btc, Button, Metric, money, Notice, percent } from './ui'
+import { btc, Button, chartTheme, Metric, money, Notice, percent } from './ui'
 
 const categoryLabels: Record<BudgetCategory, string> = { housing: 'Housing', groceries: 'Groceries', transportation: 'Transportation', utilities: 'Utilities', other: 'Other expenses' }
 const currentMonth = new Date().toISOString().slice(0, 7)
@@ -205,11 +205,11 @@ export default function BillsView() {
             <div className="h-72 w-full">
               <ResponsiveContainer>
                 <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(24,15,10,.12)" />
-                  <XAxis dataKey="month" tickFormatter={(v: string) => v.slice(2).replace('-', '·')} tick={{ fontSize: 11 }} minTickGap={36} />
-                  <YAxis tick={{ fontSize: 11 }} width={chartUnit === 'usd' ? 55 : 45} tickFormatter={(v) => chartUnit === 'usd' ? `$${v}` : String(v)} />
-                  <Tooltip formatter={(v: number) => chartUnit === 'usd' ? money(v) : btc(v)} labelFormatter={(l) => monthLabel(String(l))} />
-                  <Line type="monotone" dataKey="value" name={chartUnit === 'usd' ? 'Total USD' : 'Total BTC'} stroke="#d68448" strokeWidth={3} dot={{ r: 3 }} connectNulls={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} strokeOpacity={0.14} />
+                  <XAxis dataKey="month" tickFormatter={(v: string) => v.slice(2).replace('-', '·')} tick={chartTheme.tick} axisLine={chartTheme.axis} tickLine={false} minTickGap={36} />
+                  <YAxis tick={chartTheme.tick} axisLine={false} tickLine={false} width={chartUnit === 'usd' ? 55 : 45} tickFormatter={(v) => chartUnit === 'usd' ? `$${v}` : String(v)} />
+                  <Tooltip formatter={(v: number) => chartUnit === 'usd' ? money(v) : btc(v)} labelFormatter={(l) => monthLabel(String(l))} contentStyle={chartTheme.tooltip} itemStyle={{ color: 'var(--color-ink)' }} labelStyle={{ color: 'var(--color-ink)', fontWeight: 700 }} />
+                  <Line type="monotone" dataKey="value" name={chartUnit === 'usd' ? 'Total USD' : 'Total BTC'} stroke={chartTheme.copper} strokeWidth={3} dot={{ r: 3 }} connectNulls={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
