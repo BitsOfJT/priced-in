@@ -4,3 +4,4 @@ dist
 server/cache-data.json
 server/prices-cache.json
 *.tsbuildinfo
+.vercel

@@ -25,6 +25,22 @@ export type BudgetSnapshot = {
   createdAt: string
 }
 
+export type Bill = {
+  id: string
+  name: string
+  category: BudgetCategory
+  expectedAmount?: number
+  archived?: boolean
+  createdAt: string
+}
+
+export type BillPayment = {
+  billId: string
+  month: string
+  amount: number
+  note?: string
+}
+
 export type LedgerItem = {
   id: string
   name: string

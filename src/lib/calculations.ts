@@ -16,7 +16,7 @@ function cpiValue(cpi: CpiObservation[], month: string, category: BudgetCategory
   return cpi.find((entry) => entry.month === month && entry.series === cpiSeries[category])?.value
 }
 
-function btcValue(history: BtcObservation[], month: string) {
+export function btcValue(history: BtcObservation[], month: string) {
   return history.find((entry) => entry.date.slice(0, 7) === month)?.close
 }
 
