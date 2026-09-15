@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0c0b09" />
+    <meta name="theme-color" content="#0c0e11" />
     <meta
       name="description"
-      content="A personal ledger for seeing everyday prices in dollars and bitcoin, side by side."
+      content="See markets, everyday prices, and purchasing power denominated in bitcoin."
     />
-    <title>Priced In — Dollars and bitcoin, side by side</title>
+    <title>Priced In — Everything denominated in bitcoin</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,19 +16,15 @@
       href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css" />
     <script>
       // Apply the saved theme before first paint so the ledger never flashes the wrong palette.
       try {
-        var theme = localStorage.getItem("priced-in-theme") === "light" ? "light" : "dark";
-        document.documentElement.dataset.theme = theme;
-        var meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) meta.setAttribute("content", theme === "light" ? "#f4efe6" : "#0c0b09");
+        document.documentElement.dataset.theme = "dark";
       } catch (error) { /* storage unavailable: keep the default dark palette */ }
     </script>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/original-main.tsx"></script>
+    <script type="module" src="/src/markets-main.tsx"></script>
   </body>
 </html>

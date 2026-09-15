@@ -1,6 +1,10 @@
 # Priced In
 
-The original dark, copper-accented ledger is the default view. It uses a React/TypeScript entry with the original stylesheet and a locally stored personal ledger. New installations start empty; sourced examples are kept separate from personal entries.
+The default view is now a Bitcoin-denominated market dashboard inspired by the reference at pricedinbitcoin21.com. It includes a responsive sidebar, BTC return chart, winners/losers summaries, category filters, asset search, and a sortable-style returns table.
+
+The retained personal ledger is available at `/ledger.html`; the newer budget and investment experience remains available at `/rebuild.html`.
+
+The dashboard currently ships with a clearly labeled starter dataset for visual and interaction work. The existing server-side BTC, BLS, and Alpha Vantage integrations remain available for the next data-connection pass; no starter value is presented as a live quote. When the API is running, the header reads the current BTC/USD quote from Coinbase.
 
 The React/Tailwind budget and investment experience remains available at `/rebuild.html`. Both views understand the versioned `priced-in-v3` store and retain the older `priced-in-ledger` and `priced-in-v2` keys as migration sources.
 
