@@ -26,16 +26,21 @@ function lineByCategory(lines: BudgetLine[], category: BudgetCategory) {
 
 function estimatedValues(lines: BudgetLine[], month: string, referenceMonth: string, cpi: CpiObservation[]) {
   const values: Partial<Record<BudgetCategory, number>> = {}
+  let complete = true
   ;(['housing', 'groceries', 'transportation', 'utilities', 'other'] as BudgetCategory[]).forEach((category) => {
     values[category] = lineByCategory(lines, category).reduce((sum, line) => {
       const amount = monthlyAmount(line.amount, line.recurrence)
       if (line.fixed) return sum + amount
       const index = cpiValue(cpi, month, category)
       const referenceIndex = cpiValue(cpi, referenceMonth, category)
-      return sum + (index && referenceIndex ? amount * index / referenceIndex : 0)
+      if (!(index && referenceIndex && index > 0 && referenceIndex > 0)) {
+        complete = false
+        return sum
+      }
+      return sum + amount * index / referenceIndex
     }, 0)
   })
-  return values
+  return { values, complete }
 }
 
 export function recordedIsComplete(snapshot: BudgetSnapshot) {
@@ -47,10 +52,11 @@ export function buildComparison({
 }: { lines: BudgetLine[]; snapshots: BudgetSnapshot[]; mode: HistoryMode; referenceMonth: string; cpi: CpiObservation[]; btc: BtcObservation[]; months: string[] }): ComparisonResult {
   const points: TimelinePoint[] = uniqueMonths(months).map((month) => {
     const snapshot = snapshots.find((item) => item.month === month)
+    const estimated = mode === 'estimated' ? estimatedValues(lines, month, referenceMonth, cpi) : null
     const categories = mode === 'recorded'
       ? (snapshot && recordedIsComplete(snapshot) ? snapshot.values : {})
-      : estimatedValues(lines, month, referenceMonth, cpi)
-    const complete = mode === 'estimated' || Boolean(snapshot && recordedIsComplete(snapshot))
+      : estimated!.values
+    const complete = mode === 'estimated' ? Boolean(estimated?.complete) : Boolean(snapshot && recordedIsComplete(snapshot))
     const dollarCost = complete ? Object.values(categories).reduce((sum, value) => sum + (value ?? 0), 0) : null
     const btcUsd = btcValue(btc, month) ?? null
     const bitcoinCost = dollarCost && btcUsd ? dollarCost / btcUsd : null
@@ -84,7 +90,7 @@ export function buildComparison({
 }
 
 export function validateAllocations(lines: { allocation: number }[]) {
-  return Math.abs(lines.reduce((sum, item) => sum + item.allocation, 0) - 100) < 0.001
+  return lines.length > 0 && lines.every((item) => Number.isFinite(item.allocation) && item.allocation >= 0) && Math.abs(lines.reduce((sum, item) => sum + item.allocation, 0) - 100) < 0.001
 }
 
 export function investmentValue(capital: number, adjustedStart: number, adjustedEnd: number) {

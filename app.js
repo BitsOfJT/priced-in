@@ -3,6 +3,7 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
   "use strict";
 
   const STORAGE_KEY = "priced-in-ledger";
+  const V3_STORAGE_KEY = "priced-in-v3";
 
   const CATEGORIES = ["all", "stocks", "bills", "games", "tech", "housing", "food", "other"];
   const CATEGORY_LABELS = {
@@ -17,20 +18,21 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
   };
 
   const EXAMPLE_ITEMS = [
-    ["ex-0-apple-aapl", "Apple · AAPL", "stocks", 229.87, 8, "once", 64200, "Eight shares at last review"],
-    ["ex-1-msft", "Microsoft · MSFT", "stocks", 515.42, 4, "once", 65300, "Long-term holding"],
-    ["ex-2-netflix", "Netflix", "bills", 24.99, 1, "monthly", 68100, "Premium plan"],
-    ["ex-3-rent", "Apartment rent", "housing", 1850, 1, "monthly", 57900, "Home base"],
-    ["ex-4-groceries", "Weekly groceries", "food", 168, 1, "weekly", 61700, "Typical basket"],
-    ["ex-5-ps5", "PlayStation 5", "games", 499.99, 1, "once", 48400, "Disc edition"],
-    ["ex-6-elden-ring", "Elden Ring", "games", 59.99, 1, "once", 43200, "Base game"],
-    ["ex-7-iphone", "iPhone 16 Pro", "tech", 999, 1, "once", 59600, "128 GB"],
-    ["ex-8-internet", "Home internet", "bills", 79.99, 1, "monthly", 70100, "Fiber plan"],
-    ["ex-9-spotify", "Spotify", "bills", 11.99, 1, "monthly", 67300, "Individual plan"],
-  ].map(([id, name, category, unitUsd, quantity, recurrence, btcUsdAtCapture, notes], index) => ({
+    ["ex-0-apple-aapl", "Apple · AAPL", "stocks", "asset", 229.87, 8, "once", 64200, "Eight shares at last review"],
+    ["ex-1-msft", "Microsoft · MSFT", "stocks", "asset", 515.42, 4, "once", 65300, "Long-term holding"],
+    ["ex-2-netflix", "Netflix", "bills", "expense", 24.99, 1, "monthly", 68100, "Premium plan"],
+    ["ex-3-rent", "Apartment rent", "housing", "expense", 1850, 1, "monthly", 57900, "Home base"],
+    ["ex-4-groceries", "Weekly groceries", "food", "expense", 168, 1, "weekly", 61700, "Typical basket"],
+    ["ex-5-ps5", "PlayStation 5", "games", "purchase", 499.99, 1, "once", 48400, "Disc edition"],
+    ["ex-6-elden-ring", "Elden Ring", "games", "purchase", 59.99, 1, "once", 43200, "Base game"],
+    ["ex-7-iphone", "iPhone 16 Pro", "tech", "purchase", 999, 1, "once", 59600, "128 GB"],
+    ["ex-8-internet", "Home internet", "bills", "expense", 79.99, 1, "monthly", 70100, "Fiber plan"],
+    ["ex-9-spotify", "Spotify", "bills", "expense", 11.99, 1, "monthly", 67300, "Individual plan"],
+  ].map(([id, name, category, kind, unitUsd, quantity, recurrence, btcUsdAtCapture, notes], index) => ({
     id,
     name,
     category,
+    kind,
     unitUsd,
     quantity,
     recurrence,
@@ -41,15 +43,16 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
   }));
 
   const fallbackQuote = {
-    usd: 77000,
+    usd: 0,
     change24hPct: null,
     updatedAt: 0,
-    source: "reference rate",
+    source: "unavailable",
     history: null,
+    failedAt: 0,
   };
 
   const state = {
-    items: EXAMPLE_ITEMS,
+    items: [],
     catalogMode: true,
     catalog: [],
     catalogStatus: "Loading sourced prices…",
@@ -85,6 +88,7 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
     itemId: $("#item-id"),
     itemName: $("#item-name"),
     itemCategory: $("#item-category"),
+    itemKind: $("#item-kind"),
     itemRecurrence: $("#item-recurrence"),
     itemPrice: $("#item-price"),
     itemQuantity: $("#item-quantity"),
@@ -123,6 +127,7 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
   function validItem(item) {
     return item && typeof item.id === "string" && typeof item.name === "string" &&
       CATEGORIES.includes(item.category) && item.category !== "all" &&
+      ["expense", "purchase", "asset"].includes(item.kind || (item.ticker ? "asset" : item.recurrence === "once" ? "purchase" : "expense")) &&
       ["once", "weekly", "monthly", "yearly"].includes(item.recurrence) &&
       finiteNumber(item.unitUsd) > 0 && finiteNumber(item.quantity) > 0;
   }
@@ -134,14 +139,25 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
       if (Array.isArray(saved.items)) {
         const cleaned = saved.items.filter(validItem).map((item) => ({
           ...item,
+          kind: ["expense", "purchase", "asset"].includes(item.kind) ? item.kind : (item.ticker ? "asset" : item.recurrence === "once" ? "purchase" : "expense"),
           unitUsd: finiteNumber(item.unitUsd),
           quantity: finiteNumber(item.quantity, 1),
-          btcUsdAtCapture: finiteNumber(item.btcUsdAtCapture, fallbackQuote.usd),
+          btcUsdAtCapture: finiteNumber(item.btcUsdAtCapture, 0),
           createdAt: finiteNumber(item.createdAt, Date.now()),
           updatedAt: finiteNumber(item.updatedAt, Date.now()),
           notes: typeof item.notes === "string" ? item.notes : "",
         }));
         state.items = cleaned;
+      }
+      const v3 = JSON.parse(localStorage.getItem(V3_STORAGE_KEY) || "null");
+      const v3Items = Array.isArray(v3?.savedItems) ? v3.savedItems : Array.isArray(v3?.state?.savedItems) ? v3.state.savedItems : [];
+      if (!saved?.items && v3Items.length) {
+        state.items = v3Items.map((item) => ({
+          ...item,
+          unitUsd: finiteNumber(item.unitUsd ?? item.amount), quantity: finiteNumber(item.quantity, 1), recurrence: item.recurrence || "once",
+          kind: item.kind || (item.ticker ? "asset" : item.recurrence && item.recurrence !== "once" ? "expense" : "purchase"),
+          btcUsdAtCapture: finiteNumber(item.btcUsdAtCapture, 0), createdAt: finiteNumber(Date.parse(item.createdAt), Date.now()), updatedAt: finiteNumber(Date.parse(item.updatedAt || item.createdAt), Date.now()), notes: typeof item.notes === "string" ? item.notes : "",
+        }));
       }
       if (["sats", "btc"].includes(saved.denomination)) state.denomination = saved.denomination;
       if (["live", "1y", "3y", "5y"].includes(saved.lookback)) state.lookback = saved.lookback;
@@ -149,7 +165,7 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
         state.quote = {
           ...fallbackQuote,
           ...saved.quote,
-          usd: finiteNumber(saved.quote.usd, fallbackQuote.usd),
+          usd: finiteNumber(saved.quote.usd, 0),
           history: saved.quote.history || null,
         };
       }
@@ -167,9 +183,16 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
       hasSeeded: true,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    try {
+      const existing = JSON.parse(localStorage.getItem(V3_STORAGE_KEY) || "null") || {};
+      localStorage.setItem(V3_STORAGE_KEY, JSON.stringify({ ...existing, version: 3, useExample: false, savedItems: state.items.map((item) => ({ ...item, amount: itemTotal(item), currency: "USD", createdAt: new Date(item.createdAt).toISOString(), updatedAt: new Date(item.updatedAt).toISOString() })) }));
+    } catch {
+      showToast("Saved locally; shared workspace backup could not be updated");
+    }
   }
 
   function formatUsd(value, compact = false) {
+    if (!Number.isFinite(value)) return "—";
     const options = compact && Math.abs(value) >= 10000
       ? { notation: "compact", maximumFractionDigits: 1 }
       : { minimumFractionDigits: value < 100 ? 2 : 0, maximumFractionDigits: value < 100 ? 2 : 0 };
@@ -177,7 +200,7 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
   }
 
   function formatBitcoinFromUsd(usd, rate = state.quote.usd) {
-    if (!rate || rate <= 0) return "—";
+    if (!rate || rate <= 0 || !Number.isFinite(usd) || usd < 0) return "—";
     const btc = usd / rate;
     if (state.denomination === "btc") {
       const digits = btc >= 1 ? 4 : btc >= 0.01 ? 5 : 7;
@@ -185,6 +208,10 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
     }
     const sats = Math.round(btc * 100000000);
     return `${sats.toLocaleString("en-US")} sats`;
+  }
+
+  function usableSpotRate() {
+    return state.quote.updatedAt > 0 && !state.quote.failedAt && Date.now() - state.quote.updatedAt <= 120000 ? state.quote.usd : 0;
   }
 
   function formatBtcValue(btc) {
@@ -227,23 +254,25 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
       const total = itemTotal(item);
       result.listed += total;
       result.monthly += monthlyValue(item);
-      if (item.recurrence === "once") result.holdings += total;
+      if (item.kind === "asset") result.holdings += total;
       return result;
     }, { listed: 0, monthly: 0, holdings: 0 });
   }
 
   function renderMarket() {
-    els.headerPrice.textContent = formatUsd(state.quote.usd);
+    const ageMs = state.quote.updatedAt ? Date.now() - state.quote.updatedAt : Infinity;
+    const fresh = state.quote.updatedAt > 0 && ageMs <= 120000 && !state.quote.failedAt;
+    els.headerPrice.textContent = fresh ? formatUsd(state.quote.usd) : "—";
     const change = state.quote.change24hPct;
     els.headerChange.classList.remove("is-up", "is-down");
     if (Number.isFinite(change)) {
       els.headerChange.textContent = `${change >= 0 ? "+" : ""}${change.toFixed(2)}% · 24h`;
       els.headerChange.classList.add(change >= 0 ? "is-up" : "is-down");
     } else {
-      els.headerChange.textContent = state.quote.updatedAt ? "Live spot" : "Reference rate";
+      els.headerChange.textContent = fresh ? "Live spot" : state.quote.updatedAt ? "Stale quote" : "Unavailable";
     }
-    els.statusDot.classList.toggle("live", Boolean(state.quote.updatedAt));
-    els.quoteMeta.textContent = `${state.quote.source} · ${relativeTime(state.quote.updatedAt)}`;
+    els.statusDot.classList.toggle("live", fresh);
+    els.quoteMeta.textContent = `${state.quote.source} · ${fresh ? relativeTime(state.quote.updatedAt) : state.quote.updatedAt ? `stale · ${relativeTime(state.quote.updatedAt)}` : "unavailable"}`;
   }
 
 
@@ -372,11 +401,11 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
   function renderSummary() {
     const current = totals();
     $("#listed-usd").textContent = formatUsd(current.listed);
-    $("#listed-btc").textContent = formatBitcoinFromUsd(current.listed);
+    $("#listed-btc").textContent = formatBitcoinFromUsd(current.listed, usableSpotRate());
     $("#monthly-usd").textContent = formatUsd(current.monthly);
-    $("#monthly-btc").textContent = formatBitcoinFromUsd(current.monthly);
+    $("#monthly-btc").textContent = formatBitcoinFromUsd(current.monthly, usableSpotRate());
     $("#holdings-usd").textContent = formatUsd(current.holdings);
-    $("#holdings-btc").textContent = formatBitcoinFromUsd(current.holdings);
+    $("#holdings-btc").textContent = formatBitcoinFromUsd(current.holdings, usableSpotRate());
   }
 
   function renderConverter() {
@@ -386,18 +415,19 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
       els.converterInputPrefix.textContent = "$";
       els.converterInputSuffix.textContent = "USD";
       els.converterOutputLabel.textContent = "Bitcoin today";
-      els.converterOutput.textContent = formatBitcoinFromUsd(amount);
+      els.converterOutput.textContent = formatBitcoinFromUsd(amount, usableSpotRate());
       els.quickAmounts.hidden = false;
-      els.converterNote.textContent = `Spot conversion only · ${state.quote.source} · ${relativeTime(state.quote.updatedAt)}. Historical item conversions use their observation dates.`;
+      els.converterNote.textContent = state.quote.updatedAt && !state.quote.failedAt && Date.now() - state.quote.updatedAt <= 120000 ? `Spot conversion only · ${state.quote.source} · ${relativeTime(state.quote.updatedAt)}. Historical item conversions use their observation dates.` : "Spot conversion unavailable until a fresh BTC/USD quote is available.";
     } else {
       els.converterInputLabel.textContent = state.denomination === "sats" ? "Satoshis" : "Bitcoin";
       els.converterInputPrefix.textContent = "";
       els.converterInputSuffix.textContent = state.denomination === "sats" ? "sats" : "BTC";
       const btc = state.denomination === "sats" ? amount / 100000000 : amount;
       els.converterOutputLabel.textContent = "US dollars today";
-      els.converterOutput.textContent = formatUsd(btc * state.quote.usd);
+      const rate = usableSpotRate();
+      els.converterOutput.textContent = rate ? formatUsd(btc * rate) : "—";
       els.quickAmounts.hidden = true;
-      els.converterNote.textContent = `Using ${formatUsd(state.quote.usd)} per bitcoin.`;
+      els.converterNote.textContent = rate ? `Using ${formatUsd(rate)} per bitcoin.` : "Spot conversion unavailable until a fresh BTC/USD quote is available.";
     }
   }
 
@@ -430,6 +460,7 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
     els.itemId.value = item?.id || "";
     els.itemName.value = item?.name || "";
     els.itemCategory.value = item?.category || "other";
+    els.itemKind.value = item?.kind || (item?.ticker ? "asset" : "purchase");
     els.itemRecurrence.value = item?.recurrence || "once";
     els.itemPrice.value = item?.unitUsd ?? "";
     els.itemQuantity.value = item?.quantity ?? 1;
@@ -477,6 +508,7 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
       id: input.id || createId(),
       name: String(input.name || "").trim(),
       category: CATEGORIES.includes(input.category) && input.category !== "all" ? input.category : "other",
+      kind: ["expense", "purchase", "asset"].includes(input.kind) ? input.kind : "purchase",
       unitUsd: finiteNumber(input.unitUsd),
       quantity: finiteNumber(input.quantity, 1),
       recurrence: ["once", "weekly", "monthly", "yearly"].includes(input.recurrence) ? input.recurrence : "once",
@@ -508,15 +540,22 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
       const period = $("#price-date").value;
       const observations = [...(existing?.priceObservations || [])];
       if (period) {
+        const today = new Date().toISOString().slice(0, 10);
+        if (period > today) throw new Error("Price observations cannot be in the future.");
+        if (!Number.isFinite(Number(els.itemPrice.value)) || Number(els.itemPrice.value) <= 0) throw new Error("Enter a positive price observation.");
         const observation = {period, usd: Number(els.itemPrice.value), source: $("#price-source").value.trim() || "User-entered price"};
         const index = observations.findIndex(p=>p.period===period);
-        if(index>=0) observations[index]=observation; else observations.push(observation);
+        if(index>=0) {
+          if (!window.confirm(`Replace the saved observation for ${period}?`)) return;
+          observations[index]=observation;
+        } else observations.push(observation);
       }
       const latest = selectPrices(observations,0).latest;
       addItem({
         id: existing?.id,
         name: els.itemName.value,
         category: els.itemCategory.value,
+        kind: els.itemKind.value,
         recurrence: els.itemRecurrence.value,
         unitUsd: latest?.usd ?? els.itemPrice.value,
         priceObservations: observations,
@@ -557,40 +596,15 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
   }
 
   async function refreshQuote() {
-    const previousHistory = state.quote.history || {};
     try {
-      const [spotResult, statsResult, ...historyResults] = await Promise.allSettled([
-        fetchJson("https://api.coinbase.com/v2/prices/BTC-USD/spot"),
-        fetchJson("https://api.exchange.coinbase.com/products/BTC-USD/stats"),
-
-      ]);
-
-      let usd = spotResult.status === "fulfilled" ? finiteNumber(spotResult.value?.data?.amount) : 0;
-      let source = "Coinbase";
-      if (usd <= 0) {
-        const fallback = await fetchJson("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true");
-        usd = finiteNumber(fallback?.bitcoin?.usd);
-        source = "CoinGecko";
-        if (usd <= 0) throw new Error("No live quote");
-        state.quote.change24hPct = finiteNumber(fallback?.bitcoin?.usd_24h_change, null);
-      }
-
-      let change24hPct = state.quote.change24hPct;
-      if (statsResult.status === "fulfilled") {
-        const open = finiteNumber(statsResult.value?.open);
-        const last = finiteNumber(statsResult.value?.last, usd);
-        if (open > 0) change24hPct = ((last - open) / open) * 100;
-      }
-
-      const history = { ...previousHistory };
-      historyResults.forEach((result) => {
-        if (result.status === "fulfilled") history[result.value.id] = result.value;
-      });
-
-      state.quote = { usd, change24hPct, updatedAt: Date.now(), source, history };
+      const result = await fetchJson("/api/btc/spot", 12000);
+      const usd = finiteNumber(result?.data?.price);
+      if (usd <= 0) throw new Error("No live quote");
+      state.quote = { ...state.quote, usd, change24hPct: finiteNumber(result?.data?.change24h, null), updatedAt: Date.now(), source: result.source || "Coinbase", failedAt: 0 };
       persist();
       renderAll();
     } catch {
+      state.quote.failedAt = Date.now();
       renderMarket();
       els.quoteMeta.textContent = `${state.quote.source} · live refresh unavailable`;
     }
@@ -660,6 +674,31 @@ import { selectPrices, compareObserved, observedChange } from './src/lib/observe
     els.deleteButton.addEventListener("click", openConfirm);
     $("#keep-item-button").addEventListener("click", closeConfirm);
     $("#confirm-delete-button").addEventListener("click", deleteEditingItem);
+
+    const exportButton = $("#export-ledger-button");
+    const importButton = $("#import-ledger-button");
+    const importInput = $("#import-ledger-input");
+    exportButton?.addEventListener("click", () => {
+      const payload = JSON.stringify({ version: 3, savedItems: state.items, exportedAt: new Date().toISOString() }, null, 2);
+      const url = URL.createObjectURL(new Blob([payload], { type: "application/json" }));
+      const link = document.createElement("a"); link.href = url; link.download = "priced-in-backup.json"; link.click(); URL.revokeObjectURL(url);
+      showToast("Backup exported");
+    });
+    importButton?.addEventListener("click", () => importInput?.click());
+    importInput?.addEventListener("change", async () => {
+      const file = importInput.files?.[0];
+      if (!file) return;
+      try {
+        const raw = JSON.parse(await file.text());
+        const candidates = Array.isArray(raw) ? raw : Array.isArray(raw?.savedItems) ? raw.savedItems : Array.isArray(raw?.state?.savedItems) ? raw.state.savedItems : [];
+        const imported = candidates.map((item) => ({ ...item, kind: item.kind || (item.ticker ? "asset" : item.recurrence && item.recurrence !== "once" ? "expense" : "purchase"), unitUsd: finiteNumber(item.unitUsd ?? item.amount), quantity: finiteNumber(item.quantity, 1), recurrence: item.recurrence || "once", createdAt: finiteNumber(Date.parse(item.createdAt), Date.now()), updatedAt: finiteNumber(Date.parse(item.updatedAt || item.createdAt), Date.now()) })).filter(validItem);
+        if (!imported.length) throw new Error("No valid ledger records found");
+        if (!window.confirm(`Replace this ledger with ${imported.length} imported item${imported.length === 1 ? "" : "s"}? A recovery copy will be kept.`)) return;
+        localStorage.setItem(`${V3_STORAGE_KEY}-recovery`, JSON.stringify({ version: 3, savedItems: state.items, exportedAt: new Date().toISOString() }));
+        state.items = imported; state.catalogMode = false; persist(); renderAll(); showToast("Backup imported");
+      } catch (error) { showToast(error instanceof Error ? error.message : "Backup could not be imported"); }
+      importInput.value = "";
+    });
 
     els.search.addEventListener("input", () => {
       state.search = els.search.value;

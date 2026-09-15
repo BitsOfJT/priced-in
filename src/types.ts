@@ -2,6 +2,13 @@ export const budgetCategories = ['housing', 'groceries', 'transportation', 'util
 export type BudgetCategory = (typeof budgetCategories)[number]
 export type Recurrence = 'weekly' | 'monthly' | 'annual'
 export type HistoryMode = 'estimated' | 'recorded'
+export type LedgerItemKind = 'expense' | 'purchase' | 'asset'
+
+export type PriceObservation = {
+  period: string
+  usd: number
+  source: string
+}
 
 export type BudgetLine = {
   id: string
@@ -25,6 +32,18 @@ export type LedgerItem = {
   amount: number
   currency: 'USD' | 'BTC'
   createdAt: string
+  /** Optional for backwards-compatible imports; v3 normalizes it to purchase. */
+  kind?: LedgerItemKind
+  unitUsd?: number
+  quantity?: number
+  recurrence?: 'once' | 'weekly' | 'monthly' | 'yearly'
+  notes?: string
+  ticker?: string
+  updatedAt?: string
+  priceObservations?: PriceObservation[]
+  budgetCategory?: BudgetCategory
+  fixed?: boolean
+  includeInBudget?: boolean
 }
 
 export type Holding = { id: string; ticker: string; allocation: number }

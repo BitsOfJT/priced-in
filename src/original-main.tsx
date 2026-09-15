@@ -162,6 +162,15 @@ function OriginalDesign() {
             </section>
           </aside>
         </section>
+        <section className="reading-card backup-card" aria-label="Backup and restore">
+          <p className="eyebrow">Your data</p>
+          <p>Personal ledger entries stay in this browser. Export a backup before moving devices.</p>
+          <div className="backup-actions">
+            <button className="button button-secondary" type="button" id="export-ledger-button">Export backup</button>
+            <button className="button button-secondary" type="button" id="import-ledger-button">Import backup</button>
+            <input id="import-ledger-input" type="file" accept="application/json" hidden />
+          </div>
+        </section>
       </main>
     </div>
 
@@ -195,6 +204,15 @@ function OriginalDesign() {
               <option value="housing">Housing</option>
               <option value="food">Food</option>
               <option value="other">Other</option>
+            </select>
+          </label>
+
+          <label className="form-field">
+            <span>Item type</span>
+            <select id="item-kind" name="kind">
+              <option value="purchase">One-time purchase</option>
+              <option value="expense">Recurring expense</option>
+              <option value="asset">Asset / holding</option>
             </select>
           </label>
 

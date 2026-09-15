@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { BudgetLine, BudgetSnapshot, InvestmentScenario, LedgerItem } from './types'
-import { defaultStore, LEGACY_KEY, migrateLegacy, STORE_KEY, STORE_VERSION } from './lib/storage'
+import { defaultStore, LEGACY_KEY, LEGACY_REBUILD_KEY, migrateLegacy, migrateRebuild, STORE_KEY, STORE_VERSION, RECOVERY_KEY, parseImport, exportStore } from './lib/storage'
 
 type AppState = ReturnType<typeof defaultStore> & {
   setUseExample: (value: boolean) => void
@@ -15,10 +15,12 @@ type AppState = ReturnType<typeof defaultStore> & {
 }
 
 const legacy = typeof window !== 'undefined' ? window.localStorage.getItem(LEGACY_KEY) : null
+const rebuildLegacy = typeof window !== 'undefined' ? window.localStorage.getItem(LEGACY_REBUILD_KEY) : null
 
 export const useAppStore = create<AppState>()(persist((set) => ({
   ...defaultStore(),
   ...migrateLegacy(legacy),
+  ...migrateRebuild(rebuildLegacy),
   setUseExample: (useExample) => set({ useExample }),
   setLines: (personalLines) => set({ personalLines, useExample: false }),
   saveSnapshot: (snapshot) => set((state) => ({ snapshots: [...state.snapshots.filter((item) => item.month !== snapshot.month), snapshot].sort((a, b) => a.month.localeCompare(b.month)) })),
@@ -28,9 +30,15 @@ export const useAppStore = create<AppState>()(persist((set) => ({
   deleteSavedItem: (id) => set((state) => ({ savedItems: state.savedItems.filter((entry) => entry.id !== id) })),
   importData: (raw) => {
     if (!raw || typeof raw !== 'object') return false
-    const incoming = raw as Partial<AppState>
-    if (incoming.version !== STORE_VERSION || !Array.isArray(incoming.personalLines) || !Array.isArray(incoming.savedItems)) return false
-    set({ ...defaultStore(), ...incoming, version: STORE_VERSION })
+    const incoming = parseImport(JSON.stringify(raw))
+    if (!incoming) return false
+    try {
+      const previous = useAppStore.getState()
+      window.localStorage.setItem(RECOVERY_KEY, exportStore({ version: STORE_VERSION, useExample: previous.useExample, personalLines: previous.personalLines, snapshots: previous.snapshots, savedItems: previous.savedItems, investment: previous.investment, importedLegacy: previous.importedLegacy, selectedCatalogIds: previous.selectedCatalogIds }))
+      set({ ...defaultStore(), ...incoming, version: STORE_VERSION })
+    } catch {
+      return false
+    }
     return true
   },
-}), { name: STORE_KEY, version: STORE_VERSION }))
+}), { name: STORE_KEY, version: STORE_VERSION, migrate: (persisted) => ({ ...defaultStore(), ...(persisted as Partial<AppState>), version: STORE_VERSION }) }))
