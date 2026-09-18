@@ -372,7 +372,7 @@ textarea:focus-visible {
   top: 0;
   z-index: 20;
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: auto minmax(280px, 1fr) auto auto;
   gap: 28px;
   align-items: center;
   min-height: 84px;
@@ -380,6 +380,32 @@ textarea:focus-visible {
   background: var(--topbar-bg);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(18px);
+}
+
+.site-view-nav {
+  display: inline-flex;
+  justify-self: center;
+  padding: 3px;
+  background: var(--tint);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.site-view-nav a {
+  padding: 9px 13px;
+  color: var(--muted);
+  font-size: 13px;
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+.site-view-nav a:hover {
+  color: var(--ivory);
+}
+
+.site-view-nav a.active {
+  color: var(--ink);
+  background: var(--ivory);
 }
 
 .brand {
@@ -1568,8 +1594,16 @@ textarea::placeholder {
     gap: 12px;
   }
 
-  .market-lockup {
+  .site-view-nav {
     grid-row: 2;
+    grid-column: 1 / -1;
+    justify-self: center;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .market-lockup {
+    grid-row: 3;
     grid-column: 1 / -1;
     padding: 10px 0 0;
     border-top: 1px solid var(--line);

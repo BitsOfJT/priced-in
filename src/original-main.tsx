@@ -18,6 +18,12 @@ function OriginalDesign() {
           </span>
         </a>
 
+        <nav className="site-view-nav" aria-label="Priced In views">
+          <a href="/">Markets</a>
+          <a href="/rebuild.html">Everyday prices</a>
+          <a className="active" href="/ledger.html" aria-current="page">My ledger</a>
+        </nav>
+
         <div className="market-lockup" aria-live="polite">
           <span className="market-label"><span className="status-dot" id="status-dot"></span>BTC / USD</span>
           <strong id="header-btc-price">Connecting…</strong>

@@ -4,8 +4,24 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="theme-color" content="#180f0a" />
+<meta name="description" content="Priced In everyday prices: compare your monthly budget and investments in dollars and bitcoin." />
 <link rel="icon" href="/favicon.svg" />
 <title>Priced In — saved rebuild</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+  rel="stylesheet"
+/>
+    <script>
+      // Apply the saved theme before first paint so the rebuild view never flashes the wrong palette.
+      // Default is dark, matching the other views; only an explicit "light" opts out.
+      try {
+        var theme = window.localStorage.getItem("priced-in-theme") === "light" ? "light" : "dark";
+        document.documentElement.dataset.theme = theme;
+        if (theme === "dark") document.documentElement.classList.add("dark");
+      } catch (error) { /* storage unavailable: keep the default palette */ }
+    </script>
 </head>
 <body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body>
 </html>
