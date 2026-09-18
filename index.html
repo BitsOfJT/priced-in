@@ -17,9 +17,10 @@
       rel="stylesheet"
     />
     <script>
-      // Apply the saved theme before first paint so the ledger never flashes the wrong palette.
+      // Apply the saved theme before first paint so the markets view never flashes the wrong palette.
+      // Default is dark, matching the ledger and rebuild views; only an explicit "light" opts out.
       try {
-        document.documentElement.dataset.theme = "dark";
+        document.documentElement.dataset.theme = window.localStorage.getItem("priced-in-theme") === "light" ? "light" : "dark";
       } catch (error) { /* storage unavailable: keep the default dark palette */ }
     </script>
   </head>

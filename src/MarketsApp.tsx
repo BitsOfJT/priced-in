@@ -100,7 +100,7 @@ function MarketsApp() {
           <p className="markets-eyebrow">The hurdle rate</p>
           <h1>What is winning<br />when priced in <em>bitcoin?</em></h1>
           <p className="markets-intro">Dollar gains only tell half the story. Compare stocks, commodities, currencies, and real estate against the hardest money.</p>
-          <div className="source-note"><span>Source snapshot</span><strong>PricedInBitcoin21 · Sep 15, 2026</strong></div>
+          <div className="source-note"><span>Static snapshot · table does not update</span><strong>PricedInBitcoin21 · Sep 15, 2026</strong></div>
         </div>
 
         <div className="markets-chart-card">
@@ -128,23 +128,23 @@ function MarketsApp() {
 
       <section className="markets-score-row" aria-label="Bitcoin benchmark summary">
         <article className="benchmark-card">
-          <p className="markets-eyebrow">Assets losing to bitcoin · 5Y</p>
+          <p className="markets-label">Assets losing to bitcoin · 5Y</p>
           <div className="benchmark-number"><strong>70%</strong><span><b>72</b> of 103 assets</span></div>
           <div className="benchmark-details"><span>Median return <b className="market-down">−17.6%</b></span><span>Average return <b className="market-up">+1.6%</b></span></div>
         </article>
         <article className="distribution-card">
-          <p className="markets-eyebrow">Return distribution</p>
+          <p className="markets-label">Return distribution</p>
           <div className="distribution-bars">{([['Below −75%', 4, 'down'], ['−50 to −75%', 10, 'down'], ['−25 to −50%', 31, 'down'], ['0 to −25%', 27, 'down'], ['0 to +25%', 15, 'up'], ['Above +25%', 16, 'up']] as const).map(([label, count, tone]) => <div key={label}><span>{label}</span><i><b className={tone} style={{ width: `${count / 31 * 100}%` }} /></i><strong>{count}</strong></div>)}</div>
         </article>
       </section>
 
       <section className="markets-editorial-grid">
         <article className="ranking-card">
-          <div className="section-heading"><div><p className="markets-eyebrow">Leaders and laggards</p><h2>Who cleared the hurdle?</h2></div><span>5-year return</span></div>
+          <div className="section-heading"><div><h2>Who cleared the hurdle?</h2></div><span>5-year return</span></div>
           <div className="ranking-columns"><div><h3>Outperformed</h3>{leaders.map(([name, value], index) => <div className="ranking-row" key={name}><span>{String(index + 1).padStart(2, '0')}</span><strong>{name}</strong><b className="market-up">{value}</b></div>)}</div><div><h3>Underperformed</h3>{laggards.map(([name, value], index) => <div className="ranking-row" key={name}><span>{String(99 + index).padStart(2, '0')}</span><strong>{name}</strong><b className="market-down">{value}</b></div>)}</div></div>
         </article>
         <article className="sector-card-warm">
-          <div className="section-heading"><div><p className="markets-eyebrow">Equity sectors</p><h2>Return in bitcoin</h2></div><span>5 years</span></div>
+          <div className="section-heading"><div><h2>Return in bitcoin</h2></div><span>5 years</span></div>
           <div className="sector-list-warm">{sectors.map(([name, value]) => <div key={name}><span>{name}</span><Return value={value} /></div>)}</div>
         </article>
       </section>
@@ -161,7 +161,7 @@ function MarketsApp() {
           <label><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search assets" aria-label="Search assets" /></label>
           <div>{categories.map((item) => <button key={item} className={category === item ? 'active' : ''} onClick={() => setCategory(item)}>{item}</button>)}</div>
         </div>
-        <div className="markets-table-wrap"><table><thead><tr><th>#</th><th>Asset</th><th>Price</th>{timeframes.map((period) => <th key={period}><button className={timeframe === period ? 'active' : ''} onClick={() => setTimeframe(period)}>{period}</button></th>)}</tr></thead><tbody>{filtered.map((asset, index) => <tr key={asset.ticker}><td>{String(index + 1).padStart(2, '0')}</td><td><i style={{ background: asset.color }} /><span><strong>{asset.name}</strong><small>{asset.ticker} · {asset.category}</small></span></td><td>{btcPrice(asset.price, unit)}</td>{timeframes.map((period) => <td key={period}><Return value={asset.returns[period]} /></td>)}</tr>)}</tbody></table>{filtered.length === 0 && <p className="markets-empty">No assets match “{query}”.</p>}</div>
+        <div className="markets-table-wrap"><table><thead><tr><th>#</th><th>Asset</th><th>Price</th>{timeframes.map((period) => <th key={period}><span className={timeframe === period ? 'active' : ''}>{period}</span></th>)}</tr></thead><tbody>{filtered.map((asset, index) => <tr key={asset.ticker}><td>{String(index + 1).padStart(2, '0')}</td><td><i style={{ background: asset.color }} /><span><strong>{asset.name}</strong><small>{asset.ticker} · {asset.category}</small></span></td><td>{btcPrice(asset.price, unit)}</td>{timeframes.map((period) => <td key={period}><Return value={asset.returns[period]} /></td>)}</tr>)}</tbody></table>{filtered.length === 0 && <p className="markets-empty">No assets match “{query}”.</p>}</div>
         <footer><span>Market returns are a sourced snapshot. BTC/USD in the header is live from Coinbase when available.</span><a href="https://pricedinbitcoin21.com/" target="_blank" rel="noreferrer">View source methodology ↗</a></footer>
       </section>
     </main>
